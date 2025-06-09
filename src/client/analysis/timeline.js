@@ -2,10 +2,15 @@ import { Text, ChangeSet } from "@codemirror/state";
 import { USER_ACTIONS } from "../../shared-constants";
 
 let slider = document.querySelector("#timeline-slider");
+let playPauseButton = document.querySelector("#play-pause");
+let timeDisplay = document.querySelector("#time-display");
 let info = document.querySelector(".timeline .info");
 let prevButt = document.querySelector("#prev-history");
 let nextButt = document.querySelector("#next-history");
 let sliderPos = 0;
+let isPlaying = false;
+let playInterval = null;
+const PLAYBACK_SPEED = 1000; // 1 second per change
 // let sliderBar = document.querySelector(".timeline .bar");
 
 // // Update the current slider value (each time you drag the slider handle)
@@ -21,10 +26,11 @@ function getActiveEventTypes() {
 }
 
 function setUpTicks(events) {
-  let updateTicks = () => {
-    let dl = document.querySelector("datalist");
-    dl.innerHTML = "";
+  let dl = document.querySelector("datalist");
+  if (!dl) return; // Skip if datalist doesn't exist
 
+  let updateTicks = () => {
+    dl.innerHTML = "";
     let activeEventTypes = getActiveEventTypes();
 
     events.forEach((ev, i) => {
@@ -32,7 +38,7 @@ function setUpTicks(events) {
 
       let op = document.createElement("option");
       op.value = i + 1;
-      op.label = ev.action_type; // Not shown... BOOO
+      op.label = ev.action_type;
       dl.appendChild(op);
     });
     slider.setAttribute("list", "tickmarks");
@@ -62,16 +68,23 @@ export function setupTimeline({
   initialTab,
   switchTabFn,
 }) {
-  for (let a of actions) {
-    a.ts = a.action_ts;
-  }
-  for (let c of changes) {
-    c.ts = c.change_ts;
-  }
-  let events = [...actions, ...changes];
+  // Ensure all events have timestamps
+  let events = [...actions, ...changes].map(ev => ({
+    ...ev,
+    ts: ev.action_ts || ev.change_ts || Date.now() // Fallback to current time if no timestamp
+  }));
+
+  // Sort events by timestamp
   events.sort((a, b) => a.ts - b.ts);
-  let t0 = events.length > 0 ? events[0].ts : 0;
-  console.log("changes: ", changes);
+  
+  // Set initial timestamp to first event or current time
+  let t0 = events.length > 0 ? events[0].ts : Date.now();
+  console.log("events: ", events);
+
+  if (!slider) {
+    console.error("Timeline slider not found");
+    return;
+  }
 
   slider.max = events.length;
 
@@ -101,50 +114,122 @@ export function setupTimeline({
         continue;
       }
       // we got a change
-      let { change, file_name } = ev;
+      let { change, file_name, change_number, changeNumber } = ev;
+      if (!change) {
+        console.warn("Missing change data for event:", ev);
+        continue;
+      }
+
+      if (!file_name) {
+        console.warn("Missing file_name in change event:", ev);
+        continue;
+      }
+
       if (file_name !== "instructor.py") {
         tab = file_name;
       }
       if (file_name === "notes") {
-        // Figure out what to do
         notesEditor?.applyChange(change);
       } else {
-        // TODO: move this logic inside... maybe? Meh.
-        let changes = ChangeSet.fromJSON(JSON.parse(change));
-        codeEditors[file_name].applyChanges(changes);
+        try {
+          // Log the change data for debugging
+          console.log("Processing change:", {
+            file_name,
+            change_type: typeof change,
+            change_length: typeof change === 'string' ? change.length : JSON.stringify(change).length,
+            change_preview: typeof change === 'string' ? change.substring(0, 100) : JSON.stringify(change).substring(0, 100)
+          });
+
+          let changes;
+          if (typeof change === 'string') {
+            changes = ChangeSet.fromJSON(JSON.parse(change));
+          } else if (typeof change === 'object') {
+            changes = ChangeSet.fromJSON(change);
+          } else {
+            console.error("Invalid change format:", change);
+            continue;
+          }
+          codeEditors[file_name].applyChanges(changes);
+        } catch (error) {
+          console.error("Error applying change:", {
+            error,
+            file_name,
+            change_preview: typeof change === 'string' ? change.substring(0, 100) : JSON.stringify(change).substring(0, 100)
+          });
+        }
       }
     }
 
-    // Display the information for the event.
+    // Update time display
     if (idx == 0) {
-      info.textContent = "START";
+      if (timeDisplay) timeDisplay.textContent = "0:00";
+      if (info) info.textContent = "START";
     } else {
       let ev = events[idx - 1];
       let ms = ev.ts - t0;
-      let s = ms / 1000;
-      if (ev.action_type) {
-        if (ev.details) {
-          info.textContent = `t=${s} -- Event: ${ev.action_type} (${ev.details})`;
+      let s = Math.floor(ms / 1000);
+      let m = Math.floor(s / 60);
+      s = s % 60;
+      if (timeDisplay) timeDisplay.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+      
+      if (info) {
+        if (ev.action_type) {
+          if (ev.details) {
+            info.textContent = `t=${s} -- Event: ${ev.action_type} (${ev.details})`;
+          } else {
+            info.textContent = `t=${s} -- Event: ${ev.action_type}`;
+          }
         } else {
-          info.textContent = `t=${s} -- Event: ${ev.action_type}`;
+          info.textContent = `t=${s} -- Change #${ev.change_number} to file ${ev.file_name}`;
         }
-      } else {
-        info.textContent = `t=${s} -- Change #${ev.change_number} to file ${ev.file_name}`;
+        info.textContent = `${idx}) ${info.textContent}`;
       }
     }
-    info.textContent = `${idx}) ${info.textContent}`;
+    
     switchTabFn && tab !== "" && switchTabFn(tab);
+
+    // Stop playback if we reach the end
+    if (idx >= events.length && isPlaying) {
+      togglePlayback();
+    }
   };
 
+  function togglePlayback() {
+    if (!playPauseButton) return;
+    
+    isPlaying = !isPlaying;
+    playPauseButton.textContent = isPlaying ? "Pause" : "Play";
+    
+    if (isPlaying) {
+      playInterval = setInterval(() => {
+        if (parseInt(slider.value) < events.length) {
+          slider.value = parseInt(slider.value) + 1;
+          updateSlider();
+        } else {
+          togglePlayback();
+        }
+      }, PLAYBACK_SPEED);
+    } else {
+      clearInterval(playInterval);
+    }
+  }
+
   slider.oninput = updateSlider;
-  nextButt.addEventListener("click", () => {
-    slider.value = sliderPos + 1;
-    // sliderPos = parseInt(slider.value);
-    updateSlider();
-  });
-  prevButt.addEventListener("click", () => {
-    slider.value = sliderPos - 1;
-    // sliderPos = parseInt(slider.value);
-    updateSlider();
-  });
+  if (playPauseButton) {
+    playPauseButton.onclick = togglePlayback;
+  }
+  
+  if (nextButt) {
+    nextButt.addEventListener("click", () => {
+      slider.value = sliderPos + 1;
+      updateSlider();
+    });
+  }
+  
+  if (prevButt) {
+    prevButt.addEventListener("click", () => {
+      slider.value = sliderPos - 1;
+      updateSlider();
+    });
+  }
 }

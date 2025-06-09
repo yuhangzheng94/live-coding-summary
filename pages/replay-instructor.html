@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instructor Replay</title>
+    <link rel="stylesheet" href="/src/client/style.css">
+    <link rel="stylesheet" href="/src/client/style-replay.css">
+</head>
+<body class="code-typing-interface">
+    <div id="app">
+        <div class="topbar">
+            <div class="topbar-left">
+                <h3 id="session-name-display"></h3>
+                <span id="status-message" class="status-message"></span>
+            </div>
+            <div class="topbar-right">
+                <span id="session-info">
+                    <select id="session-select">
+                        <option value="">Select a session...</option>
+                    </select>
+                </span>
+            </div>
+        </div>
+        <div class="parent-container">
+            <div id="code-tabs">
+                <div id="code-tabs-inner">
+                    <div class="code-tab selected" id="instructor-code-tab">
+                        <div class="code-tab-text">instructor.py</div>
+                    </div>
+                </div>
+            </div>
+            <div id="code-container" class="code-container"></div>
+            <div id="timeline-container">
+                <div id="timeline-controls">
+                    <button id="play-pause">Play</button>
+                    <input type="range" id="timeline-slider" min="0" max="100" value="0" list="tickmarks">
+                    <datalist id="tickmarks"></datalist>
+                    <span id="time-display">0:00</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="module" src="/src/client/analysis/replay-instructor.js"></script>
+</body>
+</html> 

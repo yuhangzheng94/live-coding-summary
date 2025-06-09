@@ -71,9 +71,10 @@ export class LectureSession extends Model {
       },
       { transaction }
     );
-    return changes.map(({ change, change_number }) => ({
+    return changes.map(({ change, change_number, file_name }) => ({
       change: JSON.parse(change),
       changeNumber: change_number,
+      file_name: file_name || "instructor.py"  // Include file_name with fallback
     }));
   }
 

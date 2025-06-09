@@ -65,7 +65,7 @@ async function flushChangesToSession(sessionId, changeQueue, transaction) {
   let { doc, docVersion } = await lecture.getDoc(transaction);
 
   // Now, let's try to apply the changes
-  for (let { id, changes, ts } of changeQueue) {
+  for (let { id, changes, ts, file_name } of changeQueue) {
     if (id !== docVersion) {
       return {
         error: new Error(`Expected instructor change #${docVersion} but got #${id}`),
@@ -85,6 +85,7 @@ async function flushChangesToSession(sessionId, changeQueue, transaction) {
         change_number: id,
         change: JSON.stringify(changes),
         change_ts: ts,
+        file_name: file_name || "instructor.py"  // Use provided file_name with fallback
       },
       { transaction }
     );

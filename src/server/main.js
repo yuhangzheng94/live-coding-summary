@@ -516,6 +516,29 @@ async function recordBatchCodeChanges(req, res, isTypealong) {
   }
 }
 
+// Get a single lecture session
+app.get("/lecture-sessions/:sessionId", async (req, res) => {
+  const sessionId = req.params.sessionId;
+  try {
+    let response = await db.transaction(async (t) => {
+      const session = await LectureSession.findByPk(sessionId, { transaction: t });
+      if (!session) {
+        return { error: `Session with id=${sessionId} not found` };
+      }
+      return {
+        id: session.id,
+        name: session.name,
+        createdAt: session.createdAt,
+        isFinished: session.isFinished
+      };
+    });
+    res.json(response);
+  } catch (error) {
+    console.error("Error fetching session:", error);
+    res.json({ error: error.message });
+  }
+});
+
 // ViteExpress.listen(app, 3000, () =>
 //   console.log("Server is listening on port 3000..."),
 // );

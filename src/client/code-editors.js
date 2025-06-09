@@ -213,7 +213,7 @@ export class CodeFollowingEditor {
     });
   }
 
-  async handleInstructorEdit({ changes, id }) {
+  async handleInstructorEdit({ changes, id, file_name }) {
     if (!this.active) return;
 
     // ONLY FOR TESTING!
@@ -223,7 +223,7 @@ export class CodeFollowingEditor {
 
     if (id !== this.docVersion) {
       console.log(`Got id=${id} but on version ${this.docVersion}`);
-      this.pendingQueue.push({ changes, id }); // Stash it so we don't lose it.
+      this.pendingQueue.push({ changes, id, file_name }); // Include file_name in pending queue
       if (this.catchupPending) return; // Don't hammer the server if we're already trying to catch up
       this.catchupPending = true;
       await this.catchUpOnChanges();
@@ -240,9 +240,9 @@ export class CodeFollowingEditor {
       this.view.dispatch({
         effects: setInstructorSelection.of({ anchor: 0, head: 0 }),
       });
-      this.pendingQueue.forEach(({ changes, id }) => {
+      this.pendingQueue.forEach(({ changes, id, file_name }) => {
         if (id !== this.docVersion) return;
-        console.log("Catching up on change: ", id);
+        console.log("Catching up on change: ", id, "for file:", file_name);
         this.docVersion++;
         this.view.dispatch({ changes: ChangeSet.fromJSON(changes) });
       });
@@ -344,6 +344,7 @@ export class InstructorCodeEditor {
           id: this.docVersion,
           changes: tr.changes.toJSON(),
           ts: Date.now(),
+          file_name: this.fileName
         });
         this.docVersion++;
       });

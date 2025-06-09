@@ -366,8 +366,33 @@ pre {
 }
 
 .topbar-left {
-  display: grid;
+  display: flex;
   grid-area: left-section;
+  align-items: center;
+  gap: 10px;
+}
+
+.topbar-left h3 {
+  margin: 0;
+  display: inline-block;
+}
+
+.status-message {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.status-message.loading {
+  color: #666;
+  background-color: #f0f0f0;
+}
+
+.status-message.error {
+  color: #721c24;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
 }
 
 .topbar-right {
