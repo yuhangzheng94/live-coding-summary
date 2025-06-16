@@ -1,16 +1,16 @@
-import "./style.css";
+import "../style.css";
 
 import { io } from "socket.io-client";
-import { GET_JSON_REQUEST, POST_JSON_REQUEST } from "./utils.js";
+import { GET_JSON_REQUEST, POST_JSON_REQUEST } from "../utils.js";
 
-import { PythonCodeRunner } from "./code-runner.js";
+import { PythonCodeRunner } from "../code-runner.js";
 import {
   Console,
   RunInteractions,
   makeConsoleResizable,
-} from "./shared-interactions.js";
-import { InstructorCodeEditor } from "./code-editors.js";
-import { CLIENT_TYPE, SOCKET_MESSAGE_TYPE } from "../shared-constants.js";
+} from "../shared-interactions.js";
+import { InstructorCodeEditor } from "../code-editors.js";
+import { CLIENT_TYPE, SOCKET_MESSAGE_TYPE } from "../../shared-constants.js";
 
 const codeContainer = document.querySelector("#code-container");
 const startButton = document.querySelector("#start-session-butt");
