@@ -413,6 +413,61 @@ app.post("/record-playground-changes", async (req, res) => {
   await recordBatchCodeChanges(req, res, false);
 });
 
+function findLectureSessionById(sessionNumber, transaction) {
+  return LectureSession.findByPk(sessionNumber).then((lectureSession) => {
+    if (!lectureSession) throw new Error(`Session with id ${sessionNumber} not found`);
+    return lectureSession;
+  });
+}
+
+function checkRequiredFields(reqBody, requiredFields) {
+  const missing = requiredFields.filter(
+    (field) => reqBody[field] === undefined || reqBody[field] === null
+  );
+  if (missing.length) {
+    throw new Error(`Missing required fields: ${missing.join(", ")}`);
+  }
+}
+
+// record run result 
+app.post("/record-run-result", async (req, res) => {
+  let {
+    ts,
+    codeVersion,
+    sessionNumber,
+    source,
+    email,
+    result,
+  } = req.body;
+
+  try {
+    checkRequiredFields(req.body, ['ts', 'codeVersion', 'sessionNumber', 'source', 'result']);
+
+    const response = await db.transaction(async (t) => {
+      const lectureSession = await findLectureSessionById(sessionNumber, t);
+      await lectureSession.createRunResult(
+        {
+          lecture_session_id: sessionNumber,
+          run_ts: ts,
+          run_result: JSON.stringify(result),
+          code_version: codeVersion,
+          source,
+          email,
+        },
+        { transaction: t }
+      );
+    });
+
+    console.log("Run result recorded successfully");
+    res.json({ success: true });
+
+  } catch (error) {
+    console.error("Failed to record run result", error);
+    res.json({ error: error.message });
+  }
+
+});
+
 app.post("/record-user-action", async (req, res) => {
   let {
     ts,

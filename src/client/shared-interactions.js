@@ -63,6 +63,21 @@ export class RunInteractions {
     let res = await this.runner.asyncRun(code);
     await minRunTime;
     this.console.addResult({ fileName: this.editor.fileName, ...res });
+
+    // post run result to the server
+    // payload: ts, codeVersion, sessionNumber, source, email, result
+    fetch("/record-run-result", {
+      body: JSON.stringify({
+        ts: Date.now(),
+        codeVersion: this.editor.getDocVersion(),
+        sessionNumber: this.sessionNumber,
+        source: this.source,
+        email: this.email,
+        result: res,
+      }),
+      ...POST_JSON_REQUEST,
+    });
+
     this.broadcastResult({ fileName: this.editor.fileName, ...res }); // A no-op in student interfaces.
 
     this.el.classList.remove("in-progress");

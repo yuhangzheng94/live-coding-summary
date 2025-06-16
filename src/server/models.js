@@ -6,6 +6,7 @@ import { db as sequelize } from "./database.js";
 LectureSession
   InstructorChange
   InstructorAction
+  RunResult
   TypealongSession
     TypealongChange
     TypealongAction
@@ -29,6 +30,15 @@ const USER_ACTION_SCHEMA = {
   doc_version: DataTypes.INTEGER,
   action_type: DataTypes.STRING,
   details: DataTypes.STRING,
+};
+
+const RUN_RESULT_SCHEMA = {
+  lecture_session_id: DataTypes.INTEGER,
+  run_ts: DataTypes.INTEGER,
+  run_result: DataTypes.TEXT,
+  code_version: DataTypes.INTEGER,
+  source: DataTypes.STRING, // e.g., "typealong" or "playground"
+  email: DataTypes.STRING, // Email of the user who ran the code
 };
 
 function reconstructCMDoc(changes) {
@@ -117,6 +127,11 @@ export class InstructorAction extends Model {}
 InstructorAction.init(USER_ACTION_SCHEMA, { sequelize });
 LectureSession.hasMany(InstructorAction, { foreignKey: "LectureSessionsId" });
 InstructorAction.belongsTo(LectureSession);
+
+export class RunResult extends Model {}
+RunResult.init(RUN_RESULT_SCHEMA, { sequelize });
+LectureSession.hasMany(RunResult, { foreignKey: "lecture_session_id" });
+RunResult.belongsTo(LectureSession);
 
 export class TypealongSession extends Model {
   // Get a map: {fileName: {doc, docVersion}}
