@@ -301,6 +301,44 @@ app.get("/typealong-session-events", async (req, res) => {
   });
 });
 
+app.get("/lecture-session-events", async (req, res) => {
+  const id = req.query?.id;
+  if (!id) return res.json({ error: "No id provided..." });
+
+  // Let's go w/o a transaction lol
+  let lectureSession = await LectureSession.findByPk(id);
+  if (!lectureSession) return res.json({ error: "Couldn't find session" });
+
+  let instructorChanges = await lectureSession.getInstructorChanges({
+    attributes: ["change", "file_name", "change_ts", "change_number"],
+    order: ["change_ts"],
+  });
+
+  let instructorActions = await lectureSession.getInstructorActions({
+    attributes: [
+      "action_ts",
+      "action_type",
+      "details",
+      "code_version",
+    ],
+    order: ["action_ts"],
+  });
+
+  let runResults = await lectureSession.getRunResults({
+    attributes: ["run_ts", "run_result", "code_version"],
+    order: ["run_ts"],
+  });
+
+  res.json({
+    // email: lectureSession.email,
+    sessionNumber: lectureSession.id,
+    sessionName: lectureSession.name,
+    instructorChanges,
+    instructorActions,
+    runResults
+  });
+});
+
 app.get("/notes-session-events", async (req, res) => {
   const id = req.query?.id;
   if (!id) return res.json({ error: "No id provided..." });

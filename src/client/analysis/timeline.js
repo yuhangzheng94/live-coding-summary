@@ -111,7 +111,8 @@ export function setupTimeline({
       } else {
         // TODO: move this logic inside... maybe? Meh.
         let changes = ChangeSet.fromJSON(JSON.parse(change));
-        codeEditors[file_name].applyChanges(changes);
+        // codeEditors[file_name].applyChanges(changes);
+        codeEditors["instructor.py"].applyChanges(changes); // TODO: fix this
       }
     }
 
