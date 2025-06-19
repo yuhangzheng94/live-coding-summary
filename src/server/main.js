@@ -506,6 +506,29 @@ app.post("/record-run-result", async (req, res) => {
 
 });
 
+app.post("/upload-audio", upload.single("audio"), (req, res) => {
+    const { id } = req.body;
+    const audioBuffer = req.file?.buffer;
+
+    if (!id) {
+      res.status(400).json({ error: "Missing session id" });
+      return;
+    }
+
+    if (!audioBuffer) {
+      res.status(400).json({ error: "Audio file is required" });
+      return;
+    }
+
+    db.transaction(async (t) => {
+      const lectureSession = await findLectureSessionById(id, t);
+      await lectureSession.createAudioRecording({ id: req.body.id, audio_blob: audioBuffer }, { transaction: t });
+    }).then(() => res.json({ success: true })).catch((error) => {
+      console.error("Failed to save audio recording:", error);
+      res.status(500).send();
+    });
+});
+
 app.post("/record-user-action", async (req, res) => {
   let {
     ts,

@@ -41,6 +41,11 @@ const RUN_RESULT_SCHEMA = {
   email: DataTypes.STRING, // Email of the user who ran the code
 };
 
+const AUDIO_RECORDING_SCHEMA = {
+  lecture_session_id: DataTypes.INTEGER,
+  audio_blob: DataTypes.BLOB('long'), // Binary data for the audio recording
+};
+
 function reconstructCMDoc(changes) {
   let doc = Text.empty;
   let docVersion = 0;
@@ -132,6 +137,11 @@ export class RunResult extends Model {}
 RunResult.init(RUN_RESULT_SCHEMA, { sequelize });
 LectureSession.hasMany(RunResult, { foreignKey: "lecture_session_id" });
 RunResult.belongsTo(LectureSession);
+
+export class AudioRecording extends Model {}
+AudioRecording.init(AUDIO_RECORDING_SCHEMA, { sequelize });
+LectureSession.hasMany(AudioRecording, { foreignKey: "lecture_session_id" });
+AudioRecording.belongsTo(LectureSession);
 
 export class TypealongSession extends Model {
   // Get a map: {fileName: {doc, docVersion}}

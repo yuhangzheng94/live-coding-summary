@@ -4,11 +4,13 @@ import { io } from "socket.io-client";
 import { GET_JSON_REQUEST, POST_JSON_REQUEST } from "../utils.js";
 
 import { PythonCodeRunner } from "../code-runner.js";
+
 import {
   Console,
   RunInteractions,
   makeConsoleResizable,
 } from "../shared-interactions.js";
+
 import { InstructorCodeEditor } from "../code-editors.js";
 import { CLIENT_TYPE, SOCKET_MESSAGE_TYPE } from "../../shared-constants.js";
 
@@ -25,34 +27,74 @@ makeConsoleResizable(codeOutputsContainer, consoleResizer);
 const socket = io();
 // Change ID X gets you to doc version X+1
 
-///////////////////////////////
-// Initialize w/ the Server
-///////////////////////////////
-
-async function getOrCreateSession(sessionName) {
-  const response = await fetch("/lecture-session", {
-    body: JSON.stringify({ sessionName }),
-    ...POST_JSON_REQUEST,
-  });
-  let res = await response.json();
-  // TODO: what if this fails? lol. It really shouldn't :)
-  document.querySelector(
-    "#session-name-display"
-  ).innerText = `Lecture ID: ${sessionName}`;
-  res.sessionNumber && initialize(res);
-  return res.sessionNumber;
-}
-
-// If it's not disabled already, start button should create a new session
-startButton.addEventListener("click", async () => {
-  startButton.disabled = true;
-  endButton.disabled = false;
-  let sessionName = prompt("Session name: ");
-  if (!sessionName) {
-    alert("Please enter a valid session name");
+function setupMediaRecorder(sessionNumber) {
+  if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia))
+  {
+    console.error("getUserMedia not supported on your browser!");
     return;
   }
-  await getOrCreateSession(sessionName);
+
+  return navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+    const mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.chunks = [];
+
+    mediaRecorder.onstop = () => {
+      console.log("Audio recording stopped.");
+
+      stream.getTracks().forEach(track => track.stop());
+
+      const blob = new Blob(mediaRecorder.chunks, { type: mediaRecorder.mimeType });
+      mediaRecorder.chunks = [];
+
+      const formData = new FormData();
+      formData.append("id", sessionNumber);
+      formData.append("audio", blob, "recording.ogg");
+      
+      fetch("/upload-audio", {
+        method: "POST",
+        body: formData
+      }).then((response) => response.json()).then((data) => {
+        console.log("Audio uploaded successfully:", data);
+      }).catch((error) => {
+        console.error("Error uploading audio:", error);
+      });
+    };
+
+    mediaRecorder.ondataavailable = (e) => mediaRecorder.chunks.push(e.data);
+
+    endButton.addEventListener("click", () => {
+      mediaRecorder.stop();
+      console.log("Finished recording audio.");
+    });
+
+    return mediaRecorder;
+  }).catch((err) => {
+    console.error(`The following getUserMedia error occurred: ${err}`);
+  });
+};
+
+// If it's not disabled already, start button should create a new session
+startButton.addEventListener("click", () => {
+  startButton.disabled = true;
+  endButton.disabled = false;
+
+  let sessionName = prompt("Session name: ");
+
+  if (!sessionName) {
+    alert("Please enter a valid session name");
+    return false;
+  }
+
+  fetch("/lecture-session", {
+    body: JSON.stringify({ sessionName }),
+    ...POST_JSON_REQUEST
+  }).then((response) => response.json()).then((res) => {
+    // TODO: what if this fails? lol. It really shouldn't :)
+    document.querySelector("#session-name-display").innerText = `Lecture ID: ${sessionName}`;
+    res.sessionNumber && initialize(res);
+
+    console.info("Created session", res);
+  });
 });
 
 // Start up the editor and hook up the end session button.
@@ -68,6 +110,7 @@ function initialize({ doc = null, docVersion = null, sessionNumber = null }) {
     startVersion: docVersion,
     sessionNumber,
   });
+
   let codeRunner = new PythonCodeRunner();
   let consoleOutput = new Console(outputCodeContainer);
 
@@ -88,6 +131,13 @@ function initialize({ doc = null, docVersion = null, sessionNumber = null }) {
     sessionDetails.textContent += " (Terminated)";
     codeEditor.endSession();
     socket.emit(SOCKET_MESSAGE_TYPE.INSTRUCTOR_END_SESSION, { sessionNumber });
+  });
+
+  setupMediaRecorder(sessionNumber).then((mediaRecorder) => {
+    mediaRecorder.start();
+    console.log("Started recording audio.");
+  }).catch((err) => {
+    console.error("Failed to start audio recording:", err);
   });
 
   socket.on(
