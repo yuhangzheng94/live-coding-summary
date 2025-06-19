@@ -126,6 +126,11 @@ export class Console {
     this.el = innerContainer;
   }
 
+  reset() {
+    this.el.innerText = "";
+    this.el.classList.add("empty");
+  }
+
   addResult({
     results = null,
     error = null,

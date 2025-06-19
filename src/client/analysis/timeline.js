@@ -61,6 +61,8 @@ export function setupTimeline({
   notesEditor,
   initialTab,
   switchTabFn,
+  runResults = null,
+  consoleOutput = null,
 }) {
   for (let a of actions) {
     a.ts = a.action_ts;
@@ -68,7 +70,12 @@ export function setupTimeline({
   for (let c of changes) {
     c.ts = c.change_ts;
   }
-  let events = [...actions, ...changes];
+  if (runResults) {
+    for (let r of runResults) {
+      r.ts = r.run_ts;
+    }
+  }
+  let events = [...actions, ...changes, ...runResults];
   events.sort((a, b) => a.ts - b.ts);
   let t0 = events.length > 0 ? events[0].ts : 0;
   console.log("changes: ", changes);
@@ -90,6 +97,7 @@ export function setupTimeline({
       start = 0;
       Object.values(codeEditors).forEach((e) => e.reset());
       notesEditor?.reset();
+      consoleOutput?.reset();
     }
 
     for (let i = start; i < idx; i++) {
@@ -100,6 +108,14 @@ export function setupTimeline({
         }
         continue;
       }
+      
+      // handle run results
+      if (ev.run_result) {
+        const run_result = JSON.parse(ev.run_result);   
+        console.log("run result: ", run_result);   
+        consoleOutput.addResult({...run_result});
+      }
+
       // we got a change
       let { change, file_name } = ev;
       if (file_name !== "instructor.py") {

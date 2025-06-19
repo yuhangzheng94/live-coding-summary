@@ -101,6 +101,8 @@ async function initialize({ sessionNumber, sessionName, instructorChanges, instr
     // initialTab: "notes.py",
     initialTab: "instructor.py",
     switchTabFn,
+    runResults,
+    consoleOutput,
   });
 }
 

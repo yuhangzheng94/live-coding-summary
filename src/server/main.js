@@ -7,6 +7,10 @@ import { db } from "./database.js";
 import { LectureSession, NotesSession, TypealongSession } from "./models.js";
 import { CLIENT_TYPE, SOCKET_MESSAGE_TYPE } from "../shared-constants.js";
 import { ChangeBuffer } from "./change-buffer.js";
+import { where } from "sequelize";
+
+import multer from "multer";
+const upload = multer();
 
 const app = express();
 app.use(express.json({ limit: "50mb" }));
