@@ -33,7 +33,7 @@ makeConsoleResizable(codeOutputsContainer, consoleResizer);
 
 // Wait to join a session.
 // async function initialize({ sessionNumber, email, actions, changes }) {
-async function initialize({ sessionNumber, sessionName, instructorChanges, instructorActions, runResults }) {
+async function initialize({ sessionNumber, sessionName, instructorChanges, instructorActions, runResults, startTimeInSeconds, endTimeInSeconds }) {
   studentDetailsContainer.textContent = "Instructor Replay";
 
   let currentTab = 0;
@@ -95,13 +95,13 @@ async function initialize({ sessionNumber, sessionName, instructorChanges, instr
   setupTimeline({
     actions,
     changes,
-    // instructorActions,
-    // instructorChanges,
     codeEditors: fileToEditor,
     // initialTab: "notes.py",
     initialTab: "instructor.py",
     switchTabFn,
     runResults,
+    startTimeInSeconds,
+    endTimeInSeconds,
     consoleOutput,
   });
 }

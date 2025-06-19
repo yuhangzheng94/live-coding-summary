@@ -333,13 +333,31 @@ app.get("/lecture-session-events", async (req, res) => {
     order: ["run_ts"],
   });
 
+  const startTimeQueryResult = await LectureSession.findOne({
+    attributes: [
+      [db.literal('unixepoch(createdAt)'), 'createdAtUnix']
+    ],
+    where: { id: lectureSession.id }
+  });
+  const createdAtUnix = startTimeQueryResult?.get('createdAtUnix');
+
+  const endTimeQueryResult = await LectureSession.findOne({
+    attributes: [
+      [db.literal('unixepoch(updatedAt)'), 'updatedAtUnix']
+    ],
+    where: { id: lectureSession.id }
+  });
+  const updatedAtUnix = endTimeQueryResult?.get('updatedAtUnix');
+
   res.json({
     // email: lectureSession.email,
     sessionNumber: lectureSession.id,
     sessionName: lectureSession.name,
     instructorChanges,
     instructorActions,
-    runResults
+    runResults,
+    startTimeInSeconds: createdAtUnix,
+    endTimeInSeconds: updatedAtUnix
   });
 });
 

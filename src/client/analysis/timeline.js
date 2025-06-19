@@ -1,10 +1,13 @@
 import { Text, ChangeSet } from "@codemirror/state";
 import { USER_ACTIONS } from "../../shared-constants";
 
+const TIME_INCREMENT_MS = 10;
+
 let slider = document.querySelector("#timeline-slider");
 let info = document.querySelector(".timeline .info");
 let prevButt = document.querySelector("#prev-history");
 let nextButt = document.querySelector("#next-history");
+let playPauseButt = document.querySelector("#play-pause");
 let sliderPos = 0;
 // let sliderBar = document.querySelector(".timeline .bar");
 
@@ -62,6 +65,8 @@ export function setupTimeline({
   initialTab,
   switchTabFn,
   runResults = null,
+  startTimeInSeconds,
+  endTimeInSeconds,
   consoleOutput = null,
 }) {
   for (let a of actions) {
@@ -77,15 +82,19 @@ export function setupTimeline({
   }
   let events = [...actions, ...changes, ...runResults];
   events.sort((a, b) => a.ts - b.ts);
-  let t0 = events.length > 0 ? events[0].ts : 0;
+  let t0 = events.length > 0 ? startTimeInSeconds : 0; 
   console.log("changes: ", changes);
 
-  slider.max = events.length;
+  // slider ranges from 0 to lecture session duration (ms)
+  // startTime and endTime are in seconds, so we convert to ms
+  slider.max = ( endTimeInSeconds - startTimeInSeconds ) * 1000;
 
   setUpTicks(events);
 
   let updateSlider = () => {
-    let idx = parseInt(slider.value);
+    // events are represented in unixepoch time (ms)
+    const elapsedMs = parseFloat(slider.value);
+    let idx = findGreatestLowerBoundEventIndex(events, startTimeInSeconds * 1000 + elapsedMs);
     let prevPos = sliderPos;
     sliderPos = idx;
     let tab = "";
@@ -164,4 +173,37 @@ export function setupTimeline({
     // sliderPos = parseInt(slider.value);
     updateSlider();
   });
+
+  let playbackInterval = null;
+
+  playPauseButt.addEventListener("click", () => {
+    if (playPauseButt.textContent == "play") {
+      playPauseButt.textContent = "pause";
+      playbackInterval = setInterval(() => {
+        slider.value = parseFloat(slider.value) + TIME_INCREMENT_MS;
+        updateSlider();
+      }, TIME_INCREMENT_MS);
+    } else {
+      playPauseButt.textContent = "play";
+      clearInterval(playbackInterval);
+    }
+  });
+
+}
+
+
+function findGreatestLowerBoundEventIndex(events, timestamp) {
+  let low = 0;
+  let high = events.length - 1;
+
+  while (low <= high) {
+    let mid = Math.floor((low + high) / 2);
+    if (events[mid].ts < timestamp) {
+      low = mid + 1;
+    } else {
+      high = mid - 1;
+    }
+  }
+
+  return high;
 }
